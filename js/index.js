@@ -1,5 +1,6 @@
 'user strict';
 
+// global variable
 var photoArr = [];
 var picErrors = {
 	1: 'Not a valid date string. The date string passed did not validate. \
@@ -13,6 +14,7 @@ var picErrors = {
 	 used for abuse on Flickr.'
 };
 
+// utils functions
 function stringify(params) {
 	var result = '?';
 	var count = 0;
@@ -29,6 +31,7 @@ function clamp(num, min, max) {
 	return Math.min(Math.max(num, min), max);
 }
 
+// http protocol class that returns a promise
 function http(url) {
 	var ajax = function(method, url, params) {
 		var promise = new Promise(function(resolve, reject) {
@@ -83,13 +86,8 @@ var FlickrService = {
 		};
 	},
 
-	getOwnerName: function(callback, errCallback) {
-
-	},
-
 	getInterestingPics: function(callback, errCallback) {
 		var params = this.getParamsByMethod('flickr.interestingness.getList');
-		// params.date = date;
 		var cb = {
 			success: function(data) {
 				callback(JSON.parse(data), errCallback);
@@ -98,6 +96,7 @@ var FlickrService = {
 				errCallback(JSON.parse(data));
 			}
 		};
+		
 		this.send(params, cb);
 	},
 
@@ -117,7 +116,7 @@ function FlickrPhoto(params) {
 	this.owner = params.owner;
 	this.server = params.server;
 	this.url = 'https://farm' + this.farm + '.staticflickr.com/' + this.server + '/' +
-						this.id + '_' + this.secret + '.jpg';
+						this.id + '_' + this.secret + '_h.jpg';
 	this.loadImg = function() {
 		return new Promise(function(resolve, reject) {
 			var request = new XMLHttpRequest();
@@ -152,19 +151,27 @@ function LightBox(photos) {
 	};
 
 	this.render = function() {
-		var div = document.getElementById('test');
+		var div = document.getElementById('lightbox-image');
 		this.current.loadImg()
 			.then(function(response) {
 				if (div.querySelectorAll('img').length === 0) {
+					var titleDiv = document.createElement('div');
+					titleDiv.id = 'img-title';
+					titleDiv.innerHTML = this.current.title;
+
 					var img = new Image();
 					img.src = this.current.url;
+
 					div.appendChild(img);
+					div.appendChild(titleDiv);
 				} else {
 					var img = div.querySelectorAll('img')[0];
 					img.src = this.current.url;
+					document.getElementById('img-title').innerHTML = this.current.title;
 				}
 			}.bind(this), function(err) {
-				this.errOverlay(err);
+				var img = div.querySelectorAll('img')[0];
+				img.src = 'https://s.yimg.com/pw/images/en-us/photo_unavailable_h.png';
 			}.bind(this));
 	};
 
@@ -199,19 +206,80 @@ function getPhotos(res) {
 	}
 }
 
-function renderLightBox(res, errCallback) {
+function render(res, errCallback) {
 	getPhotos(res, errCallback);
+
+	renderGallery();
+	renderLightBox();
+}
+
+function isLightBoxVisible() {
+	return document.getElementById('lightbox-container').style.display === 'block';
+}
+
+function showLightbox() {
+	var lightbox = document.getElementById('lightbox-container');
+	lightbox.style.display = 'block';
+	var container = document.getElementById('container');
+	container.style.backgroundColor = 'rgba(0,0,0,0.3)';
+}
+
+function closeLightbox() {
+	var lightbox = document.getElementById('lightbox-container');
+	lightbox.style.display = 'none';
+	var container = document.getElementById('container');
+	container.style.backgroundColor = 'rgba(0,0,0,0)';
+}
+
+function renderLightBox() {
 	var lb = new LightBox(photoArr);
 	lb.render();
 
+	document.addEventListener('keydown', function(e){
+		if (isLightBoxVisible()) {
+			if (e.keyCode === 27) {
+				closeLightbox();
+			} else if (e.keyCode === 37) {
+				lb.prevImage();
+			} else if (e.keyCode === 39) {
+				lb.nextImage();
+			}
+		}
+	});
+
 	var prevButton = document.getElementById('prevBtn');
 	var nextButton = document.getElementById('nextBtn');
+	var closeButton = document.getElementById('closeBtn');
 
 	prevButton.addEventListener('click', lb.prevImage.bind(lb));
 	nextButton.addEventListener('click', lb.nextImage.bind(lb));
+	closeBtn.addEventListener('click', closeLightbox);
 }
 
-FlickrService.getInterestingPics(renderLightBox, displayErr);
+function renderGallery() {
+	var gallery = document.getElementById('gallery');
+	console.log(gallery.childNodes);
+	var imgContainer = document.createElement('div');
+	imgContainer.id = 'imgContainer';
+	if (photoArr) {
+		var div = document.createElement('div');
+		div.id = 'gallery-cover';
+		photoArr[0].loadImg()
+			.then(function(response) {
+				var img = new Image();
+				img.src = this.url;
+				div.appendChild(img);
+			}.bind(photoArr[0]), function(err){
+				div.innerHTML = '<p>Failed to load image.</p>';
+			})
+		imgContainer.appendChild(div);
+		document.getElementById('gallery-container')
+					.addEventListener('click', showLightbox, true);
+	}
+	gallery.replaceChild(imgContainer, gallery.childNodes[1]);
+}
+
+FlickrService.getInterestingPics(render, displayErr);
 setTimeout(function() {
 	if (!photoArr || photoArr.length == 0) {
 		errCallback('Failed to load images from Flickr.');
