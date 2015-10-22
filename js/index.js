@@ -3,8 +3,8 @@
 // global variable
 var photoArr = [];
 var timerID = null;
-var ie = isIE();
-// var ie = true;
+// var ie = isIE();
+var ie = true;
 
 // utils functions
 function stringify(params) {
@@ -60,6 +60,7 @@ function http(url) {
 		return promise;
 	};
 
+	// Fallback for IE since it doesn't support promises
 	var fallbackIE = function(method, url, params, callback) {
 		var xhttp = new XMLHttpRequest();
 		var finalUrl = url;
@@ -67,14 +68,14 @@ function http(url) {
 		if (params && (method === 'POST')) {
 			finalUrl += this.stringify(params);
 		}
+
 		xhttp.open(method, finalUrl, true);
 		xhttp.send();
 
 		xhttp.onreadystatechange = function() {
 			if (xhttp.readyState == 4) {
 				if (xhttp.status == 200) {
-					var res = JSON.parse(xhttp.responseText);
-					callback.success(res);
+					callback.success(xhttp.responseText);
 				} else {
 					callback.err('Failed to load image; error:' + xhttp.statusText);
 				}
@@ -84,11 +85,11 @@ function http(url) {
 
 	// no support for PUT or DELETE since we will never use them here
 	return {
-		'get': function(params, callback) {
+		'get': function(url, callback) {
 			if (!ie) {
-				return ajax('GET', url, params);
+				return ajax('GET', url);
 			} else {
-				return fallbackIE('GET', url, params, callback);
+				return fallbackIE('GET', url, {}, callback);
 			}
 		},
 		'post': function(params, callback) {
@@ -143,7 +144,6 @@ var FlickrService = {
 			.post(params)
 			.then(callback.success, callback.err);
 		}
-		
 	},
 };
 
@@ -159,26 +159,15 @@ function FlickrPhoto(params) {
 	this.url = 'https://farm' + this.farm + '.staticflickr.com/' + this.server + '/' +
 						this.id + '_' + this.secret + '.jpg';
 
-	this.loadImg = function() {
-		return new Promise(function(resolve, reject) {
-			var request = new XMLHttpRequest();
-			request.open('GET', this.url);
-			request.responseType = 'blob';
-
-			request.onload = function() {
-				if (request.status === 200) {
-					resolve(request.response);
-				} else {
-					reject('Failed to load image; error:' + request.statusText);
-				}
-			};
-
-			request.onerror = function() {
-				reject('There was a network error.');
-			};
-
-			request.send();
-		}.bind(this));
+	this.loadImg = function(callback) {
+		if (ie) {
+			http(this.flickrApiUrl)
+			.get(this.url, callback);
+		} else {
+			http(this.flickrApiUrl)
+			.get(this.url)
+			.then(callback.success, callback.err);
+		}
 	};
 
 	// Need high quality image for the cover picture
@@ -197,8 +186,8 @@ function LightBox(photos) {
 
 	this.render = function() {
 		var div = document.getElementById('lightbox-image');
-		this.current.loadImg()
-			.then(function(response) {
+		var cb = {
+			success: function() {
 				// If not initialized yet, we put in a new Image
 				if (div.querySelectorAll('img').length === 0) {
 					var titleDiv = document.createElement('div');
@@ -216,12 +205,15 @@ function LightBox(photos) {
 					img.src = this.current.url;
 					document.getElementById('img-title').innerHTML = this.current.title;
 				}
-			}.bind(this), function(err) {
+			}.bind(this),
+			err: function() {
 				// If err in loading picture, display a broken image placeholder
 				var img = div.querySelectorAll('img')[0];
 				img.src = 'https://s.yimg.com/pw/images/en-us/photo_unavailable_h.png';
 				document.getElementById('img-title').innerHTML = "Loading Image Failed";
-			}.bind(this));
+			}
+		};
+		this.current.loadImg(cb);
 	};
 
 	this.nextImage = function() {
@@ -318,14 +310,19 @@ function renderGallery(errCallback) {
 	if (photoArr.length > 1) {
 		var div = document.createElement('div');
 		div.id = 'gallery-cover';
-		photoArr[0].loadImg()
-			.then(function(response) {
+		var cb = {
+			success: function() {
 				var img = new Image();
 				img.src = this.getLargeUrl();
 				div.appendChild(img);
-			}.bind(photoArr[0]), function(err){
+			}.bind(photoArr[0]),
+			err: function() {
 				errCallback('Failed to load image cover.');
-			})
+			}
+		};
+
+		photoArr[0].loadImg(cb);
+			
 		imgContainer.appendChild(div);
 		document.getElementById('gallery-container')
 					.addEventListener('click', showLightbox, true);
