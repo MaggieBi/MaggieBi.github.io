@@ -3,18 +3,6 @@
 // global variable
 var photoArr = [];
 var timerID = null;
-// Errors that could possibly occur from the Flickr API response
-var picErrors = {
-	1: 'Not a valid date string. The date string passed did not validate. \
-	All dates must be formatted : YYYY-MM-DD.',
-	100: 'Invalid API Key. The API key passed was not valid or has expired.',
-	105: 'Service currently unavailable. The requested service is temporarily \
-	 unavailable.',
-	106: 'Write operation failed. The requested operation failed due to a \
-	 temporary issue.',
-	116: 'Bad URL found. One or more arguments contained a URL that has been \
-	 used for abuse on Flickr.'
-};
 
 // utils functions
 function stringify(params) {
