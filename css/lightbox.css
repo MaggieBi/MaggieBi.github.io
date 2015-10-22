@@ -54,6 +54,12 @@ p {
 #banner{
 	padding: 3% 0;
 	margin: 0;
+	top: 48%;
+	position: relative;
+	-moz-transform: translateY(-50%);
+	-ms-transform: translateY(-50%); /* IE 9 */
+   	-webkit-transform: translateY(-50%); /* Safari */
+    transform: translateY(-50%);
 }
 
 #instruction {
@@ -89,7 +95,7 @@ p {
 }
 
 #lightbox {
-	width: 70%;
+	width: 60%;
     height: 70%;
     margin: auto;
     position: relative;
@@ -110,6 +116,8 @@ p {
     max-height: 100%;
     position: relative;
 	top: 50%;
+	width: 80%;
+	height: auto;
 	-moz-transform: translateY(-50%);
 	-ms-transform: translateY(-50%); /* IE 9 */
    	-webkit-transform: translateY(-50%); /* Safari */
@@ -118,12 +126,16 @@ p {
 
 #img-title {
 	position: absolute;
-	top: 0px;
+	top: -2px;
 	font-size: 1.5em;
-	background-color: rgb(255,255,255);
+	background-color: rgba(0,0,0,0);
 	padding: 5px;
-	color: #333333;
+	color: #ffffff;
 	font-weight: 400;
+	width: 100%;
+	margin:auto;
+	text-align: center;
+	text-shadow: 1px 1px #333333;
 }
 
 #loading {
@@ -170,6 +182,29 @@ p {
 
 #prevBtn {
 	left: 0px;
+}
+
+#err {
+	position: fixed;
+	z-index: 100;
+	background-color: rgba(255,255,255,0.85);
+	color: #333333;
+	width: 100%;
+	height: 100%;
+	top: 0px;
+	left: 0px;
+	text-align: center;
+	font-size: 2em;
+	font-weight: 400;
+}
+
+#err p{
+	top: 48%;
+	position: relative;
+	-moz-transform: translateY(-50%);
+	-ms-transform: translateY(-50%); /* IE 9 */
+   	-webkit-transform: translateY(-50%); /* Safari */
+    transform: translateY(-50%);
 }
 
 .loader {

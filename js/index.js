@@ -2,6 +2,7 @@
 
 // global variable
 var photoArr = [];
+var timerID = null;
 var picErrors = {
 	1: 'Not a valid date string. The date string passed did not validate. \
 	All dates must be formatted : YYYY-MM-DD.',
@@ -91,9 +92,11 @@ var FlickrService = {
 		var cb = {
 			success: function(data) {
 				callback(JSON.parse(data), errCallback);
+				clearTimeout(timerID);
 			},
 			err: function(data) {
 				errCallback(JSON.parse(data));
+				clearTimeout(timerID);
 			}
 		};
 
@@ -142,7 +145,6 @@ function FlickrPhoto(params) {
 	};
 
 	this.getLargeUrl = function() {
-		alert(this.url.substring(0, this.url.length - 4) + '_h.jpg');
 		return this.url.substring(0, this.url.length - 4) + '_h.jpg';
 	};
 }
@@ -179,6 +181,7 @@ function LightBox(photos) {
 			}.bind(this), function(err) {
 				var img = div.querySelectorAll('img')[0];
 				img.src = 'https://s.yimg.com/pw/images/en-us/photo_unavailable_h.png';
+				document.getElementById('img-title').innerHTML = "Loading Image Failed";
 			}.bind(this));
 	};
 
@@ -195,11 +198,15 @@ function LightBox(photos) {
 	};
 }
 
+// generic error handling function that displays an error message on an overlay
 function displayErr(err) {
-	document.getElementById('err').innerHTML = err;
+	var errDiv = document.createElement('div');
+	errDiv.id = 'err';
+	errDiv.innerHTML = '<p>' + err + '</p>';
+	document.body.appendChild(errDiv);
 }
 
-function getPhotos(res) {
+function getPhotos(res, errCallback) {
 	if (res.stat == 'ok') {
 		res.photos.photo.forEach(function(item) {
 			photoArr.push(new FlickrPhoto(item));
@@ -287,9 +294,9 @@ function renderGallery() {
 }
 
 FlickrService.getInterestingPics(render, displayErr);
-setTimeout(function() {
+timerID = setTimeout(function() {
 	if (!photoArr || photoArr.length == 0) {
-		errCallback('Failed to load images from Flickr.');
+		displayErr('Failed to load images from Flickr.');
 	}
 }, 5000);
 
