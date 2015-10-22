@@ -48,14 +48,12 @@ p {
 	background-color: rgba(0,0,0,0.5);
 	color: #ffffff;
 	width: 100%;
-	position: absolute;
-}
-
-#banner{
 	padding: 3% 0;
 	margin: 0;
 	top: 48%;
 	position: relative;
+	font-weight: 600;
+	text-shadow: 1px 1px #333333;
 	-moz-transform: translateY(-50%);
 	-ms-transform: translateY(-50%); /* IE 9 */
    	-webkit-transform: translateY(-50%); /* Safari */
@@ -64,7 +62,7 @@ p {
 
 #instruction {
 	font-size: 0.5em;
-	font-weight: 400;
+	font-weight: 300;
 	margin-top: 2%;
 }
 
@@ -121,24 +119,14 @@ p {
 #img-title {
 	position: relative;
 	top: -2px;
-	font-size: 1.5em;
+	font-size: 1em;
 	padding: 5px;
 	color: #ffffff;
-	font-weight: 400;
+	font-weight: 300;
 	width: 100%;
 	margin:auto;
 	text-align: center;
 	text-shadow: 1px 1px #333333;
-}
-
-#loading {
-	position: relative;
-	top: 30%;
-	-moz-transform: translateY(-50%);
-	-ms-transform: translateY(-50%); /* IE 9 */
-   	-webkit-transform: translateY(-50%); /* Safari */
-    transform: translateY(-50%);
-	font-weight:400; 
 }
 
 .btn {
@@ -160,7 +148,7 @@ p {
 
 #prevBtn, #nextBtn {
 	position: fixed;
-	top: 50%;
+	top: 45%;
 	font-size: 1.5em;
 	font-weight: 600;
 	-moz-transform: translateY(-50%);
@@ -168,7 +156,7 @@ p {
    	-webkit-transform: translateY(-50%); /* Safari */
     transform: translateY(-50%);
     background-color: rgba(0,0,0,0.6);
-    padding: 5px 5px 5px 0px;
+    padding: 5px;
 } 
 
 #nextBtn {
@@ -202,6 +190,16 @@ p {
     transform: translateY(-50%);
 }
 
+#loading {
+	position: relative;
+	top: 30%;
+	-moz-transform: translateY(-50%);
+	-ms-transform: translateY(-50%); /* IE 9 */
+   	-webkit-transform: translateY(-50%); /* Safari */
+    transform: translateY(-50%);
+}
+
+/* From http://projects.lukehaas.me/css-loaders/ */
 .loader {
   margin: 60px auto;
   font-size: 10px;

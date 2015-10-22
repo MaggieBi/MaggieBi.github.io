@@ -3,6 +3,7 @@
 // global variable
 var photoArr = [];
 var timerID = null;
+// Errors that could possibly occur from the Flickr API response
 var picErrors = {
 	1: 'Not a valid date string. The date string passed did not validate. \
 	All dates must be formatted : YYYY-MM-DD.',
@@ -38,6 +39,7 @@ function http(url) {
 		var promise = new Promise(function(resolve, reject) {
 			var xhttp = new XMLHttpRequest();
 			var finalUrl = url;
+
 			if (params && (method === 'POST')) {
 				finalUrl += this.stringify(params);
 			}
@@ -70,7 +72,7 @@ function http(url) {
 	};
 }
 
-// Flickr API calls
+// Flickr API call utils
 var FlickrService = {
 	flickrApiKey: 'e425a81e5ae8f4397e5b3cab95a72940',
 	flickrApiUrl: 'https://api.flickr.com/services/rest/',
@@ -118,6 +120,7 @@ function FlickrPhoto(params) {
 	this.id = params.id;
 	this.owner = params.owner;
 	this.server = params.server;
+	// According to Flickr API, how image urls are formatted
 	this.url = 'https://farm' + this.farm + '.staticflickr.com/' + this.server + '/' +
 						this.id + '_' + this.secret + '.jpg';
 
@@ -144,6 +147,8 @@ function FlickrPhoto(params) {
 		}.bind(this));
 	};
 
+	// Need high quality image for the cover picture
+	// Hacky way of getting the url for a higher-quality version of it 
 	this.getLargeUrl = function() {
 		return this.url.substring(0, this.url.length - 4) + '_h.jpg';
 	};
@@ -152,17 +157,15 @@ function FlickrPhoto(params) {
 // Lightbox class that holds states
 function LightBox(photos) {
 	this.photos = photos
+	// Keeps track of which image is the current one displaying
 	this.curIndex = 0;
 	this.current = this.photos[this.curIndex];
-	
-	this.errOverlay = function(err) {
-		document.querySelector('body').innerHTML += err;
-	};
 
 	this.render = function() {
 		var div = document.getElementById('lightbox-image');
 		this.current.loadImg()
 			.then(function(response) {
+				// If not initialized yet, we put in a new Image
 				if (div.querySelectorAll('img').length === 0) {
 					var titleDiv = document.createElement('div');
 					titleDiv.id = 'img-title';
@@ -174,11 +177,13 @@ function LightBox(photos) {
 					div.appendChild(img);
 					div.appendChild(titleDiv);
 				} else {
+					// Otherwise, we just change the src url and title
 					var img = div.querySelectorAll('img')[0];
 					img.src = this.current.url;
 					document.getElementById('img-title').innerHTML = this.current.title;
 				}
 			}.bind(this), function(err) {
+				// If err in loading picture, display a broken image placeholder
 				var img = div.querySelectorAll('img')[0];
 				img.src = 'https://s.yimg.com/pw/images/en-us/photo_unavailable_h.png';
 				document.getElementById('img-title').innerHTML = "Loading Image Failed";
@@ -186,14 +191,18 @@ function LightBox(photos) {
 	};
 
 	this.nextImage = function() {
+		// clamp makes sure no index out of range problem
 		this.curIndex = clamp(this.curIndex + 1, 0, this.photos.length - 1);
 		this.current = this.photos[this.curIndex];
+		// Rerenders the new current image
 		this.render();
 	};
 
 	this.prevImage = function() {
+		// clamp makes sure no index out of range problem
 		this.curIndex = clamp(this.curIndex - 1, 0, this.photos.length - 1);
 		this.current = this.photos[this.curIndex];
+		// Rerenders the new current image
 		this.render();
 	};
 }
@@ -206,25 +215,15 @@ function displayErr(err) {
 	document.body.appendChild(errDiv);
 }
 
+// Upon receiving photo data back, converts it into a FlickrPhoto object array
 function getPhotos(res, errCallback) {
 	if (res.stat == 'ok') {
 		res.photos.photo.forEach(function(item) {
 			photoArr.push(new FlickrPhoto(item));
 		});
-	} else if (res.stat == 'fail' && res.code) {
-		if (res.code in picErrors) {
-			errCallback(picErrors[res.code]);
-		} else {
-			errCallback('Unknown error: Please try again later.');
-		}
+	} else if (res.stat == 'fail' && res.message) {
+		errCallback(res.message);
 	}
-}
-
-function render(res, errCallback) {
-	getPhotos(res, errCallback);
-
-	renderGallery();
-	renderLightBox();
 }
 
 function isLightBoxVisible() {
@@ -243,6 +242,14 @@ function closeLightbox() {
 	lightbox.style.display = 'none';
 	var container = document.getElementById('container');
 	container.style.backgroundColor = 'rgba(0,0,0,0)';
+}
+
+function render(res, errCallback) {
+	clearTimeout(timerID);
+	getPhotos(res, errCallback);
+
+	renderGallery(errCallback);
+	renderLightBox();
 }
 
 function renderLightBox() {
@@ -270,12 +277,12 @@ function renderLightBox() {
 	closeBtn.addEventListener('click', closeLightbox);
 }
 
-function renderGallery() {
+function renderGallery(errCallback) {
 	var gallery = document.getElementById('gallery');
 	console.log(gallery.childNodes);
 	var imgContainer = document.createElement('div');
 	imgContainer.id = 'imgContainer';
-	if (photoArr) {
+	if (photoArr.length > 1) {
 		var div = document.createElement('div');
 		div.id = 'gallery-cover';
 		photoArr[0].loadImg()
@@ -284,7 +291,7 @@ function renderGallery() {
 				img.src = this.getLargeUrl();
 				div.appendChild(img);
 			}.bind(photoArr[0]), function(err){
-				div.innerHTML = '<p>Failed to load image.</p>';
+				errCallback('Failed to load image cover.');
 			})
 		imgContainer.appendChild(div);
 		document.getElementById('gallery-container')
@@ -293,11 +300,16 @@ function renderGallery() {
 	gallery.replaceChild(imgContainer, gallery.childNodes[1]);
 }
 
-FlickrService.getInterestingPics(render, displayErr);
-timerID = setTimeout(function() {
-	if (!photoArr || photoArr.length == 0) {
-		displayErr('Failed to load images from Flickr.');
-	}
-}, 5000);
+(function(){
+	// Get data from Flickr API
+	FlickrService.getInterestingPics(render, displayErr);
+	// Set a timeout to check if 5s later no photo data received, display error
+	timerID = setTimeout(function() {
+		if (!photoArr || photoArr.length == 0) {
+			displayErr('Failed to load images from Flickr.');
+		}
+	}, 5000);
+})();
+
 
 
