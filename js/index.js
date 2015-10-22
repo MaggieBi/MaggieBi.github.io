@@ -3,6 +3,8 @@
 // global variable
 var photoArr = [];
 var timerID = null;
+var ie = isIE();
+// var ie = true;
 
 // utils functions
 function stringify(params) {
@@ -19,6 +21,15 @@ function stringify(params) {
 
 function clamp(num, min, max) {
 	return Math.min(Math.max(num, min), max);
+}
+
+function isIE() {
+	var userAgent = window.navigator.userAgent;
+	var ie = userAgent.indexOf("MSIE ");
+
+	if (ie > -1 || !!navigator.userAgent.match(/Trident.*rv\:11\./)) return true;
+
+	return false;
 }
 
 // http protocol class that returns a promise
@@ -49,13 +60,43 @@ function http(url) {
 		return promise;
 	};
 
+	var fallbackIE = function(method, url, params, callback) {
+		var xhttp = new XMLHttpRequest();
+		var finalUrl = url;
+
+		if (params && (method === 'POST')) {
+			finalUrl += this.stringify(params);
+		}
+		xhttp.open(method, finalUrl, true);
+		xhttp.send();
+
+		xhttp.onreadystatechange = function() {
+			if (xhttp.readyState == 4) {
+				if (xhttp.status == 200) {
+					var res = JSON.parse(xhttp.responseText);
+					callback.success(res);
+				} else {
+					callback.err('Failed to load image; error:' + xhttp.statusText);
+				}
+			}
+		};
+	};
+
 	// no support for PUT or DELETE since we will never use them here
 	return {
-		'get': function(params) {
-			return ajax('GET', url, params);
+		'get': function(params, callback) {
+			if (!ie) {
+				return ajax('GET', url, params);
+			} else {
+				return fallbackIE('GET', url, params, callback);
+			}
 		},
-		'post': function(params) {
-			return ajax('POST', url, params);
+		'post': function(params, callback) {
+			if (!ie) {
+				return ajax('POST', url, params);
+			} else {
+				return fallbackIE('POST', url, params, callback);
+			}
 		}
 	};
 }
@@ -94,9 +135,15 @@ var FlickrService = {
 	},
 
 	send: function(params, callback) {
-		http(this.flickrApiUrl)
-		.post(params)
-		.then(callback.success, callback.err);
+		if (ie) {
+			http(this.flickrApiUrl)
+			.post(params, callback);
+		} else {
+			http(this.flickrApiUrl)
+			.post(params)
+			.then(callback.success, callback.err);
+		}
+		
 	},
 };
 
@@ -115,7 +162,6 @@ function FlickrPhoto(params) {
 	this.loadImg = function() {
 		return new Promise(function(resolve, reject) {
 			var request = new XMLHttpRequest();
-			console.log(this.url);
 			request.open('GET', this.url);
 			request.responseType = 'blob';
 
@@ -123,7 +169,7 @@ function FlickrPhoto(params) {
 				if (request.status === 200) {
 					resolve(request.response);
 				} else {
-					reject('Failed to load image; error code:' + request.statusText);
+					reject('Failed to load image; error:' + request.statusText);
 				}
 			};
 
@@ -267,7 +313,6 @@ function renderLightBox() {
 
 function renderGallery(errCallback) {
 	var gallery = document.getElementById('gallery');
-	console.log(gallery.childNodes);
 	var imgContainer = document.createElement('div');
 	imgContainer.id = 'imgContainer';
 	if (photoArr.length > 1) {
