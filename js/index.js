@@ -96,7 +96,7 @@ var FlickrService = {
 				errCallback(JSON.parse(data));
 			}
 		};
-		
+
 		this.send(params, cb);
 	},
 
@@ -116,7 +116,8 @@ function FlickrPhoto(params) {
 	this.owner = params.owner;
 	this.server = params.server;
 	this.url = 'https://farm' + this.farm + '.staticflickr.com/' + this.server + '/' +
-						this.id + '_' + this.secret + '_h.jpg';
+						this.id + '_' + this.secret + '.jpg';
+
 	this.loadImg = function() {
 		return new Promise(function(resolve, reject) {
 			var request = new XMLHttpRequest();
@@ -139,8 +140,14 @@ function FlickrPhoto(params) {
 			request.send();
 		}.bind(this));
 	};
+
+	this.getLargeUrl = function() {
+		alert(this.url.substring(0, this.url.length - 4) + '_h.jpg');
+		return this.url.substring(0, this.url.length - 4) + '_h.jpg';
+	};
 }
 
+// Lightbox class that holds states
 function LightBox(photos) {
 	this.photos = photos
 	this.curIndex = 0;
@@ -267,7 +274,7 @@ function renderGallery() {
 		photoArr[0].loadImg()
 			.then(function(response) {
 				var img = new Image();
-				img.src = this.url;
+				img.src = this.getLargeUrl();
 				div.appendChild(img);
 			}.bind(photoArr[0]), function(err){
 				div.innerHTML = '<p>Failed to load image.</p>';
